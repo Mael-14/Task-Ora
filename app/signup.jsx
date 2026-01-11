@@ -6,9 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { signupUser, validateUsername, validateEmail, validatePassword } from '../utils/auth';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -16,11 +19,47 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  const handleSignUp = () => {
-    console.log('Sign up:', { username, email, password });
-    // Add your signup logic here
-    router.replace('/home');
+  const validateForm = () => {
+    const newErrors = {};
+    
+    const usernameValidation = validateUsername(username.trim());
+    if (!usernameValidation.valid) {
+      newErrors.username = usernameValidation.error;
+    }
+    
+    const emailValidation = validateEmail(email.trim());
+    if (!emailValidation.valid) {
+      newErrors.email = emailValidation.error;
+    }
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      newErrors.password = passwordValidation.error;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSignUp = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    const result = await signupUser(username.trim(), email.trim(), password);
+    setLoading(false);
+
+    if (result.success) {
+      Alert.alert('Success', 'Account created successfully!', [
+        { text: 'OK', onPress: () => router.replace('/home') }
+      ]);
+    } else {
+      Alert.alert('Sign Up Failed', result.error);
+    }
   };
 
   const handleSocialSignUp = (platform) => {
@@ -40,36 +79,53 @@ export default function SignUpScreen() {
         <View style={styles.inputContainer}>
           <Ionicons name="person-outline" size={20} color="#fff" style={styles.icon} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.username && styles.inputError]}
             placeholder="Username"
             placeholderTextColor="#999"
             value={username}
-            onChangeText={setUsername}
+            onChangeText={(text) => {
+              setUsername(text);
+              if (errors.username) {
+                setErrors({ ...errors, username: null });
+              }
+            }}
             autoCapitalize="none"
           />
         </View>
+        {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
 
         <View style={styles.inputContainer}>
           <Ionicons name="mail-outline" size={20} color="#fff" style={styles.icon} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.email && styles.inputError]}
             placeholder="Email"
             placeholderTextColor="#999"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (errors.email) {
+                setErrors({ ...errors, email: null });
+              }
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
           />
         </View>
+        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
         <View style={styles.inputContainer}>
           <Ionicons name="lock-closed-outline" size={20} color="#fff" style={styles.icon} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.password && styles.inputError]}
             placeholder="Password"
             placeholderTextColor="#999"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errors.password) {
+                setErrors({ ...errors, password: null });
+              }
+            }}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
           />
@@ -84,9 +140,18 @@ export default function SignUpScreen() {
             />
           </TouchableOpacity>
         </View>
+        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-        <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
-          <Text style={styles.signupButtonText}>SingUp</Text>
+        <TouchableOpacity 
+          style={[styles.signupButton, loading && styles.signupButtonDisabled]} 
+          onPress={handleSignUp}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.signupButtonText}>Sign Up</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.loginContainer}>
@@ -208,6 +273,20 @@ const styles = StyleSheet.create({
   },
   instagramButton: {
     backgroundColor: '#E1306C',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: -10,
+    marginBottom: 10,
+    marginLeft: 25,
+  },
+  inputError: {
+    borderColor: '#ff4444',
+    borderWidth: 1,
+  },
+  signupButtonDisabled: {
+    opacity: 0.6,
   },
 });
 

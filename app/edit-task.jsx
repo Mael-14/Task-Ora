@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,35 +7,94 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { getTaskById, updateTask } from '../utils/database';
 
 export default function EditTaskScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
-  // In real app, get task data from params
-  const existingTask = params?.task ? JSON.parse(params.task) : {
-    title: 'Finish UI/UX design lectures',
-    description: 'completing all the remaining learning materials, lessons, or modules in a course about User Interface (UI) and User Experience (UX) design',
-    dueDate: 'October 16, 2025',
-    category: 'Work',
-  };
+  const taskId = params?.taskId ? parseInt(params.taskId) : null;
 
-  const [title, setTitle] = useState(existingTask.title);
-  const [description, setDescription] = useState(existingTask.description);
-  const [dueDate, setDueDate] = useState(existingTask.dueDate);
-  const [category, setCategory] = useState(existingTask.category);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [category, setCategory] = useState('Personal');
+  const [completed, setCompleted] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingTask, setLoadingTask] = useState(true);
+  const [errors, setErrors] = useState({});
 
   const categories = ['Personal', 'School', 'Work', 'House hold'];
 
-  const handleSave = () => {
-    console.log('Update task:', { title, description, dueDate, category });
-    // Add update logic here
-    router.back();
+  useEffect(() => {
+    loadTask();
+  }, [taskId]);
+
+  const loadTask = async () => {
+    if (!taskId) {
+      Alert.alert('Error', 'Task not found');
+      router.back();
+      return;
+    }
+
+    try {
+      const task = await getTaskById(taskId);
+      if (task) {
+        setTitle(task.title);
+        setDescription(task.description || '');
+        setDueDate(task.due_date ? new Date(task.due_date) : null);
+        setCategory(task.category || 'Personal');
+        setCompleted(task.completed);
+      } else {
+        Alert.alert('Error', 'Task not found');
+        router.back();
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load task');
+      router.back();
+    } finally {
+      setLoadingTask(false);
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!title.trim()) {
+      newErrors.title = 'Title is required';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await updateTask(
+        taskId,
+        title.trim(),
+        description.trim() || null,
+        dueDate ? dueDate.toISOString() : null,
+        category,
+        completed
+      );
+      setLoading(false);
+      router.back();
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', 'Failed to update task. Please try again.');
+    }
   };
 
   const handleCancel = () => {
@@ -44,7 +103,26 @@ export default function EditTaskScreen() {
 
   const handleDateSelect = () => {
     setShowDatePicker(true);
-    // In real app, show date picker modal
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (event.type !== 'dismissed' && selectedDate) {
+      setDueDate(selectedDate);
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return 'Select a date';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const clearDate = () => {
+    setDueDate(null);
   };
 
   const handleCategorySelect = (selectedCategory) => {
@@ -52,8 +130,18 @@ export default function EditTaskScreen() {
     setShowCategoryPicker(false);
   };
 
+  if (loadingTask) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#e8d7c8" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.closeButton}
@@ -69,14 +157,20 @@ export default function EditTaskScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.label}>Task title</Text>
+        <Text style={styles.label}>Task title *</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, errors.title && styles.inputError]}
           placeholder="Choose a title for your task"
           placeholderTextColor="#666"
           value={title}
-          onChangeText={setTitle}
+          onChangeText={(text) => {
+            setTitle(text);
+            if (errors.title) {
+              setErrors({ ...errors, title: null });
+            }
+          }}
         />
+        {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
 
         <Text style={styles.label}>Description</Text>
         <TextInput
@@ -97,14 +191,33 @@ export default function EditTaskScreen() {
               style={styles.pickerButton}
               onPress={handleDateSelect}
             >
-              <Text style={[styles.pickerText, dueDate && styles.selectedText]}>
-                {dueDate || 'Select a date'}
+              <Text style={[styles.pickerText, dueDate && styles.pickerTextSelected]}>
+                {formatDate(dueDate)}
               </Text>
               <View style={styles.iconGroup}>
+                {dueDate && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      clearDate();
+                    }}
+                    style={{ marginRight: 5 }}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#666" />
+                  </TouchableOpacity>
+                )}
                 <Ionicons name="calendar-outline" size={20} color="#666" />
-                <Ionicons name="chevron-down" size={20} color="#666" style={{ marginLeft: 5 }} />
               </View>
             </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dueDate || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onDateChange}
+                minimumDate={new Date()}
+              />
+            )}
           </View>
 
           <View style={[styles.halfWidth, { marginLeft: 15 }]}>
@@ -148,10 +261,15 @@ export default function EditTaskScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[styles.saveButton, { marginLeft: 15 }]}
+          style={[styles.saveButton, { marginLeft: 15 }, loading && styles.saveButtonDisabled]}
           onPress={handleSave}
+          disabled={loading}
         >
-          <Text style={styles.saveButtonText}>Save</Text>
+          {loading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -175,7 +293,7 @@ export default function EditTaskScreen() {
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -321,6 +439,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     marginTop: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: -5,
+    marginBottom: 5,
+    marginLeft: 5,
+  },
+  inputError: {
+    borderColor: '#ff4444',
+    borderWidth: 1,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  pickerTextSelected: {
+    color: '#fff',
   },
 });
 

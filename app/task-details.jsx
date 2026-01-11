@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,37 +6,99 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { getTaskById, deleteTask } from '../utils/database';
 
 export default function TaskDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
-  // In real app, get task data from params
-  const task = params?.task ? JSON.parse(params.task) : {
-    title: 'Finish UI/UX design lectures',
-    dueDate: 'October 16, 2025',
-    category: 'Work',
-    description: 'Completing all the remaining learning materials, lessons, or modules in a course about User Interface (UI) and User Experience (UX) design.',
+  const taskId = params?.taskId ? parseInt(params.taskId) : null;
+
+  const [task, setTask] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTask();
+  }, [taskId]);
+
+  const loadTask = async () => {
+    if (!taskId) {
+      Alert.alert('Error', 'Task not found');
+      router.back();
+      return;
+    }
+
+    try {
+      const taskData = await getTaskById(taskId);
+      if (taskData) {
+        setTask(taskData);
+      } else {
+        Alert.alert('Error', 'Task not found');
+        router.back();
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load task');
+      router.back();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = () => {
     router.push({
       pathname: '/edit-task',
-      params: { task: JSON.stringify(task) }
+      params: { taskId: taskId.toString() }
     });
   };
 
   const handleDelete = () => {
-    console.log('Delete task');
-    // Add delete confirmation and logic
-    router.back();
+    Alert.alert(
+      'Delete Task',
+      'Are you sure you want to delete this task?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteTask(taskId);
+              router.back();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete task');
+            }
+          },
+        },
+      ]
+    );
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#e8d7c8" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!task) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Task not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -54,25 +116,31 @@ export default function TaskDetailsScreen() {
       >
         <Text style={styles.taskTitle}>{task.title}</Text>
 
-        <Text style={styles.description}>{task.description ?? 'No description available'}</Text>
+        <Text style={styles.description}>{task.description || 'No description'}</Text>
 
         <View style={styles.detailSection}>
           <View style={styles.iconContainer}>
-            <Ionicons name="calendar-outline" size={18} color="#000" />
+            <Ionicons name="calendar-outline" size={24} color="#000" />
           </View>
           <View>
             <Text style={styles.detailLabel}>Due date</Text>
-            <Text style={styles.detailValue}>{task.dueDate ?? 'No due date available'}</Text>
+            <Text style={styles.detailValue}>
+              {task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }) : 'No due date'}
+            </Text>
           </View>
         </View>
 
         <View style={styles.detailSection}>
           <View style={styles.iconContainer}>
-            <Ionicons name="folder-outline" size={18} color="#000" />
+            <Ionicons name="folder-outline" size={24} color="#000" />
           </View>
           <View>
             <Text style={styles.detailLabel}>Category</Text>
-            <Text style={styles.detailValue}>{task.category ?? 'No category available'}</Text>
+            <Text style={styles.detailValue}>{task.category}</Text>
           </View>
         </View>
       </ScrollView>
@@ -95,6 +163,8 @@ export default function TaskDetailsScreen() {
         </TouchableOpacity>
       </View>
 
+      
+
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.navItem}
@@ -115,7 +185,7 @@ export default function TaskDetailsScreen() {
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -234,6 +304,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     marginTop: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 16,
   },
 });
 

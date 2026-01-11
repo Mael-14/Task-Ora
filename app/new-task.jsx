@@ -7,25 +7,65 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { getCurrentUser } from '../utils/auth';
+import { createTask } from '../utils/database';
 
 export default function NewTaskScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [category, setCategory] = useState('');
+  const [dueDate, setDueDate] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [category, setCategory] = useState('Personal');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const categories = ['Personal', 'School', 'Work', 'House hold'];
 
-  const handleSave = () => {
-    console.log('Save task:', { title, description, dueDate, category });
-    // Add save logic here
-    router.back();
+  const validateForm = () => {
+    const newErrors = {};
+    if (!title.trim()) {
+      newErrors.title = 'Title is required';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        Alert.alert('Error', 'Please login again');
+        router.replace('/');
+        return;
+      }
+
+      setLoading(true);
+      await createTask(
+        user.id,
+        title.trim(),
+        description.trim() || null,
+        dueDate ? dueDate.toISOString() : null,
+        category
+      );
+      setLoading(false);
+      router.back();
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', 'Failed to create task. Please try again.');
+    }
   };
 
   const handleCancel = () => {
@@ -34,9 +74,26 @@ export default function NewTaskScreen() {
 
   const handleDateSelect = () => {
     setShowDatePicker(true);
-    // In real app, show date picker modal
-    // For now, just set a placeholder
-    setDueDate('October 16, 2025');
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (event.type !== 'dismissed' && selectedDate) {
+      setDueDate(selectedDate);
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return 'Select a date';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const clearDate = () => {
+    setDueDate(null);
   };
 
   const handleCategorySelect = (selectedCategory) => {
@@ -61,14 +118,20 @@ export default function NewTaskScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.label}>Task title</Text>
+        <Text style={styles.label}>Task title *</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, errors.title && styles.inputError]}
           placeholder="Choose a title for your task"
           placeholderTextColor="#666"
           value={title}
-          onChangeText={setTitle}
+          onChangeText={(text) => {
+            setTitle(text);
+            if (errors.title) {
+              setErrors({ ...errors, title: null });
+            }
+          }}
         />
+        {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
 
         <Text style={styles.label}>Description</Text>
         <TextInput
@@ -89,14 +152,33 @@ export default function NewTaskScreen() {
               style={styles.pickerButton}
               onPress={handleDateSelect}
             >
-              <Text style={styles.pickerText}>
-                {dueDate || 'Select a date'}
+              <Text style={[styles.pickerText, dueDate && styles.pickerTextSelected]}>
+                {formatDate(dueDate)}
               </Text>
               <View style={styles.iconGroup}>
+                {dueDate && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      clearDate();
+                    }}
+                    style={{ marginRight: 5 }}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#666" />
+                  </TouchableOpacity>
+                )}
                 <Ionicons name="calendar-outline" size={20} color="#666" />
-                <Ionicons name="chevron-down" size={20} color="#666" style={{ marginLeft: 5 }} />
               </View>
             </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dueDate || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onDateChange}
+                minimumDate={new Date()}
+              />
+            )}
           </View>
 
           <View style={[styles.halfWidth, { marginLeft: 15 }]}>
@@ -137,10 +219,15 @@ export default function NewTaskScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[styles.saveButton, { marginLeft: 15 }]}
+          style={[styles.saveButton, { marginLeft: 15 }, loading && styles.saveButtonDisabled]}
           onPress={handleSave}
+          disabled={loading}
         >
-          <Text style={styles.saveButtonText}>Save</Text>
+          {loading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -304,6 +391,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     marginTop: 5,
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: -5,
+    marginBottom: 5,
+    marginLeft: 5,
+  },
+  inputError: {
+    borderColor: '#ff4444',
+    borderWidth: 1,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  pickerTextSelected: {
+    color: '#fff',
   },
 });
 

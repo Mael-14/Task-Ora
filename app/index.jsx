@@ -5,20 +5,50 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { loginUser } from '../utils/auth';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    console.log('Login:', { username, password });
-    // Add your login logic here
-    router.replace('/home');
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+    }
+    
+    if (!password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleLogin = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    const result = await loginUser(username.trim(), password);
+    setLoading(false);
+
+    if (result.success) {
+      router.replace('/home');
+    } else {
+      Alert.alert('Login Failed', result.error);
+    }
   };
 
   const handleSocialLogin = (platform) => {
@@ -38,23 +68,34 @@ export default function LoginScreen() {
         <View style={styles.inputContainer}>
           <Ionicons name="person-outline" size={20} color="#fff" style={styles.icon} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.username && styles.inputError]}
             placeholder="Username"
             placeholderTextColor="#999"
             value={username}
-            onChangeText={setUsername}
+            onChangeText={(text) => {
+              setUsername(text);
+              if (errors.username) {
+                setErrors({ ...errors, username: null });
+              }
+            }}
             autoCapitalize="none"
           />
         </View>
+        {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
 
         <View style={styles.inputContainer}>
           <Ionicons name="lock-closed-outline" size={20} color="#fff" style={styles.icon} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.password && styles.inputError]}
             placeholder="Password"
             placeholderTextColor="#999"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errors.password) {
+                setErrors({ ...errors, password: null });
+              }
+            }}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
           />
@@ -69,9 +110,18 @@ export default function LoginScreen() {
             />
           </TouchableOpacity>
         </View>
+        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Login</Text>
+        <TouchableOpacity 
+          style={[styles.loginButton, loading && styles.loginButtonDisabled]} 
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.loginButtonText}>Login</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.signupContainer}>
@@ -194,6 +244,20 @@ const styles = StyleSheet.create({
   },
   instagramButton: {
     backgroundColor: '#E1306C',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: -10,
+    marginBottom: 10,
+    marginLeft: 25,
+  },
+  inputError: {
+    borderColor: '#ff4444',
+    borderWidth: 1,
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
 });
 

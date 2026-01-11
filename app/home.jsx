@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   ScrollView, 
-  StyleSheet 
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { getCurrentUser } from '../utils/auth';
+import { getTasksByUserId, toggleTaskCompleted } from '../utils/database';
 
 const TaskItem = ({ task, completed, onToggle, onPress }) => (
   <TouchableOpacity 
@@ -25,7 +29,11 @@ const TaskItem = ({ task, completed, onToggle, onPress }) => (
     <View style={styles.taskContent}>
       <Text style={styles.taskTitle}>{task.title}</Text>
       <Text style={styles.taskMeta}>
-        {task.time} - {task.category}
+        {task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        }) : 'No due date'} - {task.category}
       </Text>
     </View>
   </TouchableOpacity>
@@ -33,25 +41,72 @@ const TaskItem = ({ task, completed, onToggle, onPress }) => (
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [todayTasks, setTodayTasks] = useState([
-    { id: 1, title: 'Finish UI/UX design lectures', time: '10:30 am', category: 'Work', completed: true },
-    { id: 2, title: 'Start DevOps lectures', time: '12:00 pm', category: 'Work', completed: true },
-    { id: 3, title: 'Go to school for interview', time: '3:15 pm', category: 'Work', completed: false },
-    { id: 4, title: 'Start my report on AI', time: '9:30 pm', category: 'Work', completed: false },
-  ]);
+  const [todayTasks, setTodayTasks] = useState([]);
+  const [upcomingTasks, setUpcomingTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [userId, setUserId] = useState(null);
 
-  const [upcomingTasks] = useState([
-    { id: 5, title: 'Mail my lecturer', time: 'Monday - 8:30 am', category: 'Work', completed: false },
-    { id: 6, title: 'Start coursera courses', time: 'Wednesday - 4:30 pm', category: 'Work', completed: false },
-  ]);
+  const loadTasks = async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        router.replace('/');
+        return;
+      }
 
-  const toggleTask = (id, isToday) => {
-    if (isToday) {
-      setTodayTasks(tasks =>
-        tasks.map(task =>
-          task.id === id ? { ...task, completed: !task.completed } : task
-        )
-      );
+      setUserId(user.id);
+      const allTasks = await getTasksByUserId(user.id);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayTasksList = [];
+      const upcomingTasksList = [];
+
+      allTasks.forEach(task => {
+        if (task.due_date) {
+          const dueDate = new Date(task.due_date);
+          dueDate.setHours(0, 0, 0, 0);
+          
+          if (dueDate.getTime() === today.getTime()) {
+            todayTasksList.push(task);
+          } else if (dueDate.getTime() > today.getTime()) {
+            upcomingTasksList.push(task);
+          }
+        } else {
+          // Tasks without due date go to upcoming
+          upcomingTasksList.push(task);
+        }
+      });
+
+      setTodayTasks(todayTasksList);
+      setUpcomingTasks(upcomingTasksList);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadTasks();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadTasks();
+  };
+
+  const handleToggleTask = async (taskId, completed) => {
+    try {
+      await toggleTaskCompleted(taskId, !completed);
+      await loadTasks();
+    } catch (error) {
+      console.error('Error toggling task:', error);
     }
   };
 
@@ -64,35 +119,54 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        <Text style={styles.sectionTitle}>Today</Text>
-        {todayTasks.map(task => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            completed={task.completed}
-            onToggle={() => toggleTask(task.id, true)}
-            onPress={() => router.push({
-              pathname: '/task-details',
-              params: { task: JSON.stringify(task) }
-            })}
-          />
-        ))}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#e8d7c8" />
+        </View>
+      ) : (
+        <ScrollView 
+          style={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          <Text style={styles.sectionTitle}>Today</Text>
+          {todayTasks.length === 0 ? (
+            <Text style={styles.emptyText}>No tasks for today</Text>
+          ) : (
+            todayTasks.map(task => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                completed={task.completed}
+                onToggle={() => handleToggleTask(task.id, task.completed)}
+                onPress={() => router.push({
+                  pathname: '/task-details',
+                  params: { taskId: task.id.toString() }
+                })}
+              />
+            ))
+          )}
 
-        <Text style={styles.sectionTitle}>Upcoming</Text>
-        {upcomingTasks.map(task => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            completed={task.completed}
-            onToggle={() => toggleTask(task.id, false)}
-            onPress={() => router.push({
-              pathname: '/task-details',
-              params: { task: JSON.stringify(task) }
-            })}
-          />
-        ))}
-      </ScrollView>
+          <Text style={styles.sectionTitle}>Upcoming</Text>
+          {upcomingTasks.length === 0 ? (
+            <Text style={styles.emptyText}>No upcoming tasks</Text>
+          ) : (
+            upcomingTasks.map(task => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                completed={task.completed}
+                onToggle={() => handleToggleTask(task.id, task.completed)}
+                onPress={() => router.push({
+                  pathname: '/task-details',
+                  params: { taskId: task.id.toString() }
+                })}
+              />
+            ))
+          )}
+        </ScrollView>
+      )}
 
       <View style={styles.bottomNav}>
         <TouchableOpacity 
@@ -216,6 +290,18 @@ const styles = StyleSheet.create({
   navLabel: {
     fontSize: 12,
     color: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#999',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 20,
   },
 });
 
