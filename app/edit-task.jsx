@@ -9,10 +9,14 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-export default function EditTaskScreen({ navigation, route }) {
-  // In real app, get task data from route.params
-  const existingTask = route?.params?.task || {
+export default function EditTaskScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  // In real app, get task data from params
+  const existingTask = params?.task ? JSON.parse(params.task) : {
     title: 'Finish UI/UX design lectures',
     description: 'completing all the remaining learning materials, lessons, or modules in a course about User Interface (UI) and User Experience (UX) design',
     dueDate: 'October 16, 2025',
@@ -31,11 +35,11 @@ export default function EditTaskScreen({ navigation, route }) {
   const handleSave = () => {
     console.log('Update task:', { title, description, dueDate, category });
     // Add update logic here
-    navigation.goBack();
+    router.back();
   };
 
   const handleCancel = () => {
-    navigation.goBack();
+    router.back();
   };
 
   const handleDateSelect = () => {
@@ -49,7 +53,7 @@ export default function EditTaskScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.closeButton}
@@ -98,12 +102,12 @@ export default function EditTaskScreen({ navigation, route }) {
               </Text>
               <View style={styles.iconGroup}>
                 <Ionicons name="calendar-outline" size={20} color="#666" />
-                <Ionicons name="chevron-down" size={20} color="#666" />
+                <Ionicons name="chevron-down" size={20} color="#666" style={{ marginLeft: 5 }} />
               </View>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.halfWidth}>
+          <View style={[styles.halfWidth, { marginLeft: 15 }]}>
             <Text style={styles.label}>Category</Text>
             <TouchableOpacity 
               style={styles.pickerButton}
@@ -144,7 +148,7 @@ export default function EditTaskScreen({ navigation, route }) {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.saveButton}
+          style={[styles.saveButton, { marginLeft: 15 }]}
           onPress={handleSave}
         >
           <Text style={styles.saveButtonText}>Save</Text>
@@ -154,24 +158,24 @@ export default function EditTaskScreen({ navigation, route }) {
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Home')}
+          onPress={() => router.push('/home')}
         >
-          <Ionicons name="home-outline" size={24} color="#fff" />
+          <Ionicons name="home-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Category')}
+          onPress={() => router.push('/categories')}
         >
-          <Ionicons name="grid-outline" size={24} color="#fff" />
+          <Ionicons name="grid-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Category</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="person-outline" size={24} color="#fff" />
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/profile')}>
+          <Ionicons name="person-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -184,12 +188,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: 10,
+    paddingTop: 60,
+    marginBottom: 10,
   },
   closeButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    marginLeft: 5,
     justifyContent: 'center',
   },
   headerTitle: {
@@ -200,18 +207,20 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingVertical: 5,
+    marginBottom: 10,
   },
   label: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 10,
-    marginTop: 20,
+    marginTop: 10,
   },
   input: {
     backgroundColor: '#555',
     borderRadius: 15,
-    padding: 15,
+    padding: 10,
     color: '#fff',
     fontSize: 16,
   },
@@ -222,7 +231,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 15,
   },
   halfWidth: {
     flex: 1,
@@ -244,7 +252,6 @@ const styles = StyleSheet.create({
   },
   iconGroup: {
     flexDirection: 'row',
-    gap: 5,
   },
   categoryDropdown: {
     position: 'absolute',
@@ -271,14 +278,14 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    gap: 15,
+    paddingTop: 60,
+    marginBottom: 10,
   },
   cancelButton: {
     flex: 1,
     backgroundColor: '#555',
     borderRadius: 25,
-    paddingVertical: 15,
+    paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -291,7 +298,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#e8d7c8',
     borderRadius: 25,
-    paddingVertical: 15,
+    paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -316,3 +323,4 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
+

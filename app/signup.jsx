@@ -6,31 +6,35 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
-export default function LoginScreen({ navigation }) {
+export default function SignUpScreen() {
+  const router = useRouter();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
-    console.log('Login:', { username, password });
-    // Add your login logic here
+  const handleSignUp = () => {
+    console.log('Sign up:', { username, email, password });
+    // Add your signup logic here
+    router.replace('/home');
   };
 
-  const handleSocialLogin = (platform) => {
-    console.log(`Login with ${platform}`);
-    // Add social login logic here
+  const handleSocialSignUp = (platform) => {
+    console.log(`Sign up with ${platform}`);
+    // Add social signup logic here
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>TaskOra</Text>
+        <Text style={styles.title}>Create an account</Text>
         
         <Text style={styles.subtitle}>
-          Welcome back ! Please Login to your account .
+          let's get you started.
         </Text>
 
         <View style={styles.inputContainer}>
@@ -46,6 +50,19 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.inputContainer}>
+          <Ionicons name="mail-outline" size={20} color="#fff" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#999"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
           <Ionicons name="lock-closed-outline" size={20} color="#fff" style={styles.icon} />
           <TextInput
             style={styles.input}
@@ -53,40 +70,50 @@ export default function LoginScreen({ navigation }) {
             placeholderTextColor="#999"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             autoCapitalize="none"
           />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={{ paddingLeft: 10 }}
+          >
+            <Ionicons
+              name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+              size={20}
+              color="#000000ff"
+            />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Login</Text>
+        <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
+          <Text style={styles.signupButtonText}>SingUp</Text>
         </TouchableOpacity>
 
-        <View style={styles.signupContainer}>
-          <Text style={styles.signupText}>Don't have an account ? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.signupLink}>SignUp</Text>
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginText}>Already having an account ? </Text>
+          <TouchableOpacity onPress={() => router.push('/')}>
+            <Text style={styles.loginLink}>Login</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.socialContainer}>
           <TouchableOpacity 
             style={[styles.socialButton, styles.googleButton]}
-            onPress={() => handleSocialLogin('Google')}
+            onPress={() => handleSocialSignUp('Google')}
           >
             <Ionicons name="logo-google" size={24} color="#EA4335" />
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.socialButton, styles.githubButton]}
-            onPress={() => handleSocialLogin('GitHub')}
+            style={[styles.socialButton, styles.githubButton, { marginLeft: 30 }]}
+            onPress={() => handleSocialSignUp('GitHub')}
           >
             <Ionicons name="logo-github" size={24} color="#000" />
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.socialButton, styles.instagramButton]}
-            onPress={() => handleSocialLogin('Instagram')}
+            style={[styles.socialButton, styles.instagramButton, { marginLeft: 30 }]}
+            onPress={() => handleSocialSignUp('Instagram')}
           >
             <Ionicons name="logo-instagram" size={24} color="#fff" />
           </TouchableOpacity>
@@ -107,16 +134,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   title: {
-    fontSize: 42,
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 20,
-    letterSpacing: 1,
+    marginBottom: 10,
   },
   subtitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     marginBottom: 40,
   },
@@ -125,8 +151,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#555',
     borderRadius: 25,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: 25,
     marginBottom: 15,
   },
   icon: {
@@ -137,29 +162,29 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  loginButton: {
+  signupButton: {
     backgroundColor: '#e8d7c8',
     borderRadius: 25,
-    paddingVertical: 15,
+    paddingVertical: 10,
     alignItems: 'center',
     marginTop: 15,
     marginBottom: 20,
   },
-  loginButtonText: {
+  signupButtonText: {
     color: '#000',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  signupContainer: {
+  loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
-  signupText: {
+  loginText: {
     color: '#fff',
     fontSize: 14,
   },
-  signupLink: {
+  loginLink: {
     color: '#4169E1',
     fontSize: 14,
     textDecorationLine: 'underline',
@@ -167,7 +192,6 @@ const styles = StyleSheet.create({
   socialContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 30,
   },
   socialButton: {
     width: 50,
@@ -186,3 +210,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#E1306C',
   },
 });
+

@@ -6,15 +6,22 @@ import {
   ScrollView, 
   StyleSheet 
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
-const TaskItem = ({ task, completed, onToggle }) => (
+const TaskItem = ({ task, completed, onToggle, onPress }) => (
   <TouchableOpacity 
     style={styles.taskItem}
-    onPress={onToggle}
+    onPress={onPress}
   >
-    <View style={[styles.checkbox, completed && styles.checkboxCompleted]}>
-      {completed && <Text style={styles.checkmark}>✓</Text>}
-    </View>
+    <TouchableOpacity 
+      style={styles.checkboxContainer}
+      onPress={onToggle}
+    >
+      <View style={[styles.checkbox, completed && styles.checkboxCompleted]}>
+        {completed && <Text style={styles.checkmark}>✓</Text>}
+      </View>
+    </TouchableOpacity>
     <View style={styles.taskContent}>
       <Text style={styles.taskTitle}>{task.title}</Text>
       <Text style={styles.taskMeta}>
@@ -25,6 +32,7 @@ const TaskItem = ({ task, completed, onToggle }) => (
 );
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [todayTasks, setTodayTasks] = useState([
     { id: 1, title: 'Finish UI/UX design lectures', time: '10:30 am', category: 'Work', completed: true },
     { id: 2, title: 'Start DevOps lectures', time: '12:00 pm', category: 'Work', completed: true },
@@ -51,7 +59,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tasks</Text>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/new-task')}>
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -64,6 +72,10 @@ export default function HomeScreen() {
             task={task}
             completed={task.completed}
             onToggle={() => toggleTask(task.id, true)}
+            onPress={() => router.push({
+              pathname: '/task-details',
+              params: { task: JSON.stringify(task) }
+            })}
           />
         ))}
 
@@ -74,21 +86,33 @@ export default function HomeScreen() {
             task={task}
             completed={task.completed}
             onToggle={() => toggleTask(task.id, false)}
+            onPress={() => router.push({
+              pathname: '/task-details',
+              params: { task: JSON.stringify(task) }
+            })}
           />
         ))}
       </ScrollView>
 
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>🏠</Text>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => router.push('/home')}
+        >
+          <Ionicons name="home" size={18} color="#fff" />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>📊</Text>
+        <TouchableOpacity style={styles.navItem}
+        onPress={() => router.push('/categories')}
+        >
+          <Ionicons name="grid-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Category</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>👤</Text>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => router.push('/profile')}
+        >
+          <Ionicons name="person-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -138,18 +162,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#555',
     borderRadius: 15,
-    padding: 15,
+    padding: 5,
     marginBottom: 10,
     alignItems: 'center',
   },
+  checkboxContainer: {
+    marginRight: 15,
+  },
   checkbox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    marginLeft: 5,
     backgroundColor: '#e8d7c8',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
   },
   checkboxCompleted: {
     backgroundColor: '#e8d7c8',
@@ -177,7 +204,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     backgroundColor: '#444',
     paddingVertical: 15,
-    paddingBottom: 30,
+    paddingBottom: 20,
   },
   navItem: {
     alignItems: 'center',
@@ -191,3 +218,4 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
+

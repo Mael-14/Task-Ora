@@ -10,8 +10,10 @@ import {
   Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen() {
+  const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(true);
 
@@ -40,7 +42,7 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => router.back()}
         >
           <Ionicons name="chevron-back" size={28} color="#fff" />
         </TouchableOpacity>
@@ -133,20 +135,20 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Home')}
+          onPress={() => router.push('/home')}
         >
-          <Ionicons name="home-outline" size={24} color="#fff" />
+          <Ionicons name="home-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Category')}
+          onPress={() => router.push('/categories')}
         >
-          <Ionicons name="grid-outline" size={24} color="#fff" />
+          <Ionicons name="grid-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Category</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="person" size={24} color="#fff" />
+          <Ionicons name="person" size={18} color="#fff" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -164,11 +166,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingTop: 60,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    marginLeft: 5,
     justifyContent: 'center',
   },
   headerTitle: {
@@ -230,8 +234,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#555',
-    borderRadius: 15,
-    padding: 20,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     marginBottom: 10,
   },
   settingText: {
@@ -259,3 +264,4 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
+

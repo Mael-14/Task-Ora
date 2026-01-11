@@ -8,6 +8,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const CategoryItem = ({ category, onPress }) => (
   <TouchableOpacity 
@@ -24,7 +25,8 @@ const CategoryItem = ({ category, onPress }) => (
   </TouchableOpacity>
 );
 
-export default function CategoriesScreen({ navigation }) {
+export default function CategoriesScreen() {
+  const router = useRouter();
   const [categories] = useState([
     { id: 1, name: 'Personal', count: 8 },
     { id: 2, name: 'School', count: 2 },
@@ -43,7 +45,7 @@ export default function CategoriesScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Categories</Text>
         <TouchableOpacity 
@@ -70,24 +72,24 @@ export default function CategoriesScreen({ navigation }) {
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Home')}
+          onPress={() => router.push('/home')}
         >
-          <Ionicons name="home-outline" size={24} color="#fff" />
+          <Ionicons name="home-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="grid" size={24} color="#fff" />
+          <Ionicons name="grid" size={18} color="#fff" />
           <Text style={styles.navLabel}>Category</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')}
+          onPress={() => router.push('/profile')}
         >
-          <Ionicons name="person-outline" size={24} color="#fff" />
+          <Ionicons name="person-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -101,7 +103,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingTop: 60,
   },
   headerTitle: {
     fontSize: 36,
@@ -109,8 +111,10 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   addButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    marginLeft: 5,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -122,14 +126,15 @@ const styles = StyleSheet.create({
   categoryItem: {
     backgroundColor: '#555',
     borderRadius: 15,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 5,
     marginBottom: 15,
   },
   categoryTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 5,
+    marginBottom: 2,
   },
   categoryCount: {
     fontSize: 16,
@@ -151,3 +156,4 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
+

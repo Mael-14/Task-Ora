@@ -8,32 +8,39 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-export default function TaskDetailsScreen({ navigation, route }) {
-  // In real app, get task data from route.params
-  const task = {
+export default function TaskDetailsScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  // In real app, get task data from params
+  const task = params?.task ? JSON.parse(params.task) : {
     title: 'Finish UI/UX design lectures',
-    description: 'completing all the remaining learning materials, lessons, or modules in a course about User Interface (UI) and User Experience (UX) design.',
     dueDate: 'October 16, 2025',
     category: 'Work',
+    description: 'Completing all the remaining learning materials, lessons, or modules in a course about User Interface (UI) and User Experience (UX) design.',
   };
 
   const handleEdit = () => {
-    navigation.navigate('EditTask', { task });
+    router.push({
+      pathname: '/edit-task',
+      params: { task: JSON.stringify(task) }
+    });
   };
 
   const handleDelete = () => {
     console.log('Delete task');
     // Add delete confirmation and logic
-    navigation.goBack();
+    router.back();
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => router.back()}
         >
           <Ionicons name="chevron-back" size={28} color="#fff" />
         </TouchableOpacity>
@@ -47,25 +54,25 @@ export default function TaskDetailsScreen({ navigation, route }) {
       >
         <Text style={styles.taskTitle}>{task.title}</Text>
 
-        <Text style={styles.description}>{task.description}</Text>
+        <Text style={styles.description}>{task.description ?? 'No description available'}</Text>
 
         <View style={styles.detailSection}>
           <View style={styles.iconContainer}>
-            <Ionicons name="calendar-outline" size={24} color="#000" />
+            <Ionicons name="calendar-outline" size={18} color="#000" />
           </View>
           <View>
             <Text style={styles.detailLabel}>Due date</Text>
-            <Text style={styles.detailValue}>{task.dueDate}</Text>
+            <Text style={styles.detailValue}>{task.dueDate ?? 'No due date available'}</Text>
           </View>
         </View>
 
         <View style={styles.detailSection}>
           <View style={styles.iconContainer}>
-            <Ionicons name="folder-outline" size={24} color="#000" />
+            <Ionicons name="folder-outline" size={18} color="#000" />
           </View>
           <View>
             <Text style={styles.detailLabel}>Category</Text>
-            <Text style={styles.detailValue}>{task.category}</Text>
+            <Text style={styles.detailValue}>{task.category ?? 'No category available'}</Text>
           </View>
         </View>
       </ScrollView>
@@ -76,39 +83,39 @@ export default function TaskDetailsScreen({ navigation, route }) {
           onPress={handleEdit}
         >
           <Ionicons name="pencil-outline" size={20} color="#000" />
-          <Text style={styles.editButtonText}>Edit</Text>
+          <Text style={[styles.editButtonText, { marginLeft: 8 }]}>Edit</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.deleteButton}
+          style={[styles.deleteButton, { marginLeft: 15 }]}
           onPress={handleDelete}
         >
           <Ionicons name="trash-outline" size={20} color="#fff" />
-          <Text style={styles.deleteButtonText}>Delete</Text>
+          <Text style={[styles.deleteButtonText, { marginLeft: 8 }]}>Delete</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.bottomNav}>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Home')}
+          onPress={() => router.push('/home')}
         >
-          <Ionicons name="home-outline" size={24} color="#fff" />
+          <Ionicons name="home-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Category')}
+          onPress={() => router.push('/categories')}
         >
-          <Ionicons name="grid-outline" size={24} color="#fff" />
+          <Ionicons name="grid-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Category</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="person-outline" size={24} color="#fff" />
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/profile')}>
+          <Ionicons name="person-outline" size={18} color="#fff" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -121,12 +128,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: 10,
+    paddingTop: 60,
+    marginBottom: 10,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    marginLeft: 5,
     justifyContent: 'center',
   },
   headerTitle: {
@@ -137,18 +147,19 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 20,
   },
   taskTitle: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 20,
+    marginBottom: 10,
     lineHeight: 40,
   },
   description: {
     fontSize: 16,
-    color: '#ccc',
-    marginBottom: 40,
+    color: '#fff',
+    marginBottom: 20,
     lineHeight: 24,
   },
   detailSection: {
@@ -157,8 +168,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   iconContainer: {
-    width: 60,
-    height: 60,
+    width: 40,
+    height: 40,
     borderRadius: 30,
     backgroundColor: '#e8d7c8',
     justifyContent: 'center',
@@ -178,18 +189,17 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    gap: 15,
+    paddingVertical: 10,
+    marginBottom: 10,
   },
   editButton: {
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#e8d7c8',
     borderRadius: 25,
-    paddingVertical: 15,
+    paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
   editButtonText: {
     color: '#000',
@@ -201,10 +211,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#dc3545',
     borderRadius: 25,
-    paddingVertical: 15,
+    paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
   deleteButtonText: {
     color: '#fff',
@@ -227,3 +236,4 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
+
